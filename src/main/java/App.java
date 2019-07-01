@@ -1,3 +1,5 @@
+import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.List;
 
 /*
@@ -14,7 +16,90 @@ public class App {
 
     public String bestCharge(List<String> inputs) {
         //TODO: write code here
+        String ans = "";
+        List<Order> orders = new ArrayList<>();
+        for (String input :
+                inputs) {
+            String[] s = input.split("x");
+            String id = s[0].trim();
+            int number = Integer.parseInt(s[1].trim());
+            orders.add(new Order(id, number));
+        }
+        ans += "============= 订餐明细 =============\n";
+        DecimalFormat df = new DecimalFormat("0");
+        double choice1 = 0, choice2 = 0;
+        List<Item> items = itemRepository.findAll();
+        List<String> salePromotion = salesPromotionRepository.findAll().get(1).getRelatedItems();
+        List<OrderItem> orderedItems = new ArrayList<>();
+        List<String> promotionItem = new ArrayList<>();
+        for (Order order :
+                orders) {
+            for (Item item :
+                    items) {
+                if (order.id.equals(item.getId())) {
+                    orderedItems.add(new OrderItem(item, order.number));
+                    double price = item.getPrice() * order.number;
+                    choice1 += price;
+                    ans += (item.getName() + " x " + order.number + " = " + df.format(price) + "元\n");
+                    boolean found = false;
+                    for (String id :
+                            salePromotion) {
+                        if (found) break;
+                        if (order.id.equals(id)) {
+                            price = item.getPrice() / 2 * order.number;
+                            choice2 += price;
+                            promotionItem.add(item.getName());
+                            found = true;
+                        }
+                    }
+                    if (!found) choice2 += price;
+                }
+            }
+        }
+        ans += "-----------------------------------\n";
+        choice1 = choice1 > 30 ? choice1 - 6 : choice1;
+        if (choice1 <= choice2) {
+            if(choice1 + 6 > 30) {
+                ans += "使用优惠:\n" ;
+                ans += (salesPromotionRepository.findAll().get(0).getDisplayName() + "，省6元\n");
+                ans += "-----------------------------------\n";
+                ans += ("总计："+ df.format(choice1) + "元\n" );
+                ans += "===================================";
+            }
+            else {
+                ans += ("总计："+ df.format(choice1) + "元\n" );
+                ans += "===================================";
+            }
+        }
+        else {
+            String s = String.join("，",promotionItem);
+            double diff = choice1 + 6 - choice2;
+            ans += "使用优惠:\n" ;
+            ans += (salesPromotionRepository.findAll().get(1).getDisplayName() + "(" + s + ")，省" + df.format(diff) + "元\n");
+            ans += "-----------------------------------\n";
+            ans += ("总计："+ df.format(choice2) + "元\n" );
+            ans += "===================================";
+        }
+        return ans;
+    }
+}
 
-        return null;
+class Order {
+    String id;
+    int number;
+
+    Order(String id_, int number_) {
+        id = id_;
+        number = number_;
+    }
+}
+
+class OrderItem {
+    Item item;
+    int number;
+
+    OrderItem(Item item_, int number_) {
+        item = item_;
+        number = number_;
     }
 }
